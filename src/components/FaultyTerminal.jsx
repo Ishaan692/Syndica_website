@@ -218,6 +218,28 @@ function hexToRgb(hex) {
   return [((num >> 16) & 255) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255];
 }
 
+/**
+ * @param {Object} props
+ * @param {string} [props.className]
+ * @param {import('react').CSSProperties} [props.style]
+ * @param {number} [props.scale]
+ * @param {number[]} [props.gridMul]
+ * @param {number} [props.digitSize]
+ * @param {number} [props.timeScale]
+ * @param {boolean} [props.pause]
+ * @param {number} [props.scanlineIntensity]
+ * @param {number} [props.glitchAmount]
+ * @param {number} [props.flickerAmount]
+ * @param {number} [props.noiseAmp]
+ * @param {number} [props.chromaticAberration]
+ * @param {number|boolean} [props.dither]
+ * @param {number} [props.curvature]
+ * @param {string} [props.tint]
+ * @param {boolean} [props.mouseReact]
+ * @param {number} [props.mouseStrength]
+ * @param {boolean} [props.pageLoadAnimation]
+ * @param {number} [props.brightness]
+ */
 export default function FaultyTerminal({
   scale = 1,
   gridMul = [2, 1],
