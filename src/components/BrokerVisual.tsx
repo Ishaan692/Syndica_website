@@ -2,96 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CLIENTS = [
-  { name: "Acme Corp", status: "active", policies: 8, premium: "$1.2M", risk: "Low", score: 94 },
-  { name: "Vertex Industries", status: "active", policies: 12, premium: "$3.4M", risk: "Medium", score: 78 },
-  { name: "Helios Energy", status: "renewal", policies: 5, premium: "$890K", risk: "Low", score: 88 },
-  { name: "NovaTech LLC", status: "active", policies: 3, premium: "$450K", risk: "High", score: 52 },
-  { name: "Meridian Capital", status: "pending", policies: 7, premium: "$2.1M", risk: "Medium", score: 71 },
-];
-
-const ACTIVITY_LOG = [
-  { time: "2s ago", event: "Policy GL-4401 bound", type: "success" },
-  { time: "14s ago", event: "Certificate issued → Acme Corp", type: "info" },
-  { time: "31s ago", event: "Claim #8892 opened by Helios", type: "warning" },
-  { time: "1m ago", event: "Endorsement approved — Vertex", type: "success" },
-  { time: "2m ago", event: "Renewal notice sent → NovaTech", type: "info" },
-  { time: "4m ago", event: "Submission received — Meridian", type: "success" },
-];
-
-function MiniSparkline({ color = "brand-teal" }: { color?: string }) {
-  // Use deterministic data points to prevent SSR hydration mismatch errors
-  const points = [14.2, 18.5, 12.1, 22.4, 15.6, 26.2, 18.9, 21.3, 28.5, 20.1, 25.8, 29.5];
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"} ${i * (100 / 11)} ${32 - p}`).join(" ");
-  
-  return (
-    <svg viewBox="0 0 100 32" className="w-full h-8" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id={`spark-${color}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <motion.path
-        d={path + ` L 100 32 L 0 32 Z`}
-        fill={`url(#spark-${color})`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-      />
-      <motion.path
-        d={path}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      />
-    </svg>
-  );
-}
-
-function RiskGauge({ score }: { score: number }) {
-  const circumference = 2 * Math.PI * 28;
-  const offset = circumference - (score / 100) * circumference * 0.75; // 270 deg arc
-  const color = score >= 80 ? "#2dd4bf" : score >= 60 ? "#facc15" : "#f87171";
-  
-  return (
-    <div className="relative w-20 h-20 flex items-center justify-center">
-      <svg viewBox="0 0 64 64" className="w-full h-full -rotate-[135deg]">
-        <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" 
-          strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`} strokeLinecap="round" />
-        <motion.circle cx="32" cy="32" r="28" fill="none" stroke={color} strokeWidth="3" 
-          strokeDasharray={`${circumference * 0.75} ${circumference * 0.25}`} strokeLinecap="round"
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
-        <motion.span 
-          className="text-lg font-bold font-mono" style={{ color }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          {score}
-        </motion.span>
-        <span className="text-[7px] font-mono text-white/25 uppercase tracking-wider">Score</span>
-      </div>
-    </div>
-  );
-}
-
 export default function BrokerVisual() {
-  const [selectedClient, setSelectedClient] = useState(0);
-  const [activeTab, setActiveTab] = useState<"clients" | "activity">("clients");
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
-
-  const client = CLIENTS[selectedClient];
+  const [activeTab, setActiveTab] = useState("Dashboard");
 
   // Cycle through a "live typing" latency value
   const [latency, setLatency] = useState(12);
@@ -102,255 +14,346 @@ export default function BrokerVisual() {
     return () => clearInterval(interval);
   }, []);
 
+  const sidebarGroups = [
+    { name: "WORKSPACE", items: ["Dashboard", "Calendar"] },
+    { name: "DEALS", items: ["Policies", "RFQs", "Quotes", "Claims", "Renewals"] },
+    { name: "FINANCE", items: ["Commissions", "Payments"] },
+    { name: "DIRECTORY", items: ["Clients", "Insurers", "Documents"] },
+  ];
+
   return (
-    <div className="relative w-full max-w-2xl aspect-[4/3] rounded-2xl overflow-hidden flex flex-col select-none
-      border border-brand-teal/20 bg-gradient-to-br from-[#0c1518] via-[#0d1117] to-[#0a0f14]
-      shadow-[0_0_80px_rgba(26,91,92,0.15),inset_0_1px_0_rgba(26,91,92,0.1)]">
-      
-      {/* Ambient glow spots */}
-      <div className="absolute -top-16 -left-16 w-48 h-48 bg-brand-teal/8 rounded-full blur-[60px] pointer-events-none" />
-      <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-brand-teal/5 rounded-full blur-[50px] pointer-events-none" />
-      
-      {/* Scanline */}
-      <motion.div 
-        animate={{ y: ["-100%", "400%"] }}
-        transition={{ duration: 8, ease: "linear", repeat: Infinity }}
-        className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent via-brand-teal/[0.03] to-transparent z-30 pointer-events-none"
-      />
-
-      {/* Top bar */}
-      <div className="relative z-10 flex justify-between items-center px-4 py-2.5 bg-black/40 backdrop-blur-sm border-b border-white/[0.06]">
-        <div className="flex gap-2 items-center">
-          <motion.div 
-            animate={{ boxShadow: ["0 0 4px rgba(26,91,92,0.6)", "0 0 12px rgba(26,91,92,1)", "0 0 4px rgba(26,91,92,0.6)"] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-2 h-2 rounded-full bg-brand-teal"
-          />
-          <span className="font-mono text-brand-teal/90 text-[11px] tracking-[0.15em] uppercase font-medium">BrokerOS</span>
-          <span className="font-mono text-[9px] text-white/15 ml-1">v2.4.1</span>
-        </div>
-        <div className="flex gap-1.5 items-center">
-          <span className="font-mono text-[9px] text-white/20 mr-2">{latency}ms</span>
-          <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06] hover:bg-red-400/30 transition-colors cursor-pointer border border-white/[0.08]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06] hover:bg-yellow-400/30 transition-colors cursor-pointer border border-white/[0.08]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/[0.06] hover:bg-green-400/30 transition-colors cursor-pointer border border-white/[0.08]" />
-        </div>
-      </div>
-
-      {/* Main body */}
-      <div className="relative z-10 flex-1 flex overflow-hidden">
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+      <div className="relative w-full max-w-4xl aspect-[16/10] rounded-2xl overflow-hidden flex flex-col select-none
+        border border-brand-teal/20 bg-gradient-to-br from-[#0c1518] via-[#0d1117] to-[#0a0f14]
+        shadow-[0_0_80px_rgba(26,91,92,0.15),inset_0_1px_0_rgba(26,91,92,0.1)] font-sans">
         
-        {/* Left sidebar */}
-        <div className="w-[42%] border-r border-white/[0.06] flex flex-col bg-black/20">
-          {/* Tabs */}
-          <div className="flex border-b border-white/[0.06]">
-            {(["clients", "activity"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 font-mono text-[10px] uppercase tracking-widest transition-all duration-200 cursor-pointer relative
-                  ${activeTab === tab 
-                    ? "text-brand-teal" 
-                    : "text-white/20 hover:text-white/40"
-                  }`}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <motion.div layoutId="broker-tab-indicator" className="absolute bottom-0 inset-x-0 h-[2px] bg-brand-teal shadow-[0_0_8px_rgba(26,91,92,0.6)]" />
-                )}
-              </button>
-            ))}
-          </div>
-          
-          {/* List */}
-          <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
-            <AnimatePresence mode="wait">
-              {activeTab === "clients" ? (
-                <motion.div
-                  key="clients"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-0.5"
-                >
-                  {CLIENTS.map((c, i) => (
-                    <motion.div
-                      key={c.name}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      onClick={() => setSelectedClient(i)}
-                      onMouseEnter={() => setHoveredRow(i)}
-                      onMouseLeave={() => setHoveredRow(null)}
-                      className={`px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 font-mono text-[11px] flex items-center justify-between group relative overflow-hidden
-                        ${selectedClient === i 
-                          ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/25" 
-                          : "text-white/40 hover:bg-white/[0.04] hover:text-white/60 border border-transparent"
-                        }`}
-                    >
-                      {/* Hover glow */}
-                      {hoveredRow === i && selectedClient !== i && (
-                        <motion.div 
-                          layoutId="broker-hover-glow"
-                          className="absolute inset-0 bg-gradient-to-r from-brand-teal/[0.04] to-transparent rounded-lg"
-                          transition={{ type: "spring", bounce: 0.15 }}
-                        />
-                      )}
-                      <div className="relative z-10 flex items-center gap-2 truncate">
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold flex-shrink-0
-                          ${selectedClient === i ? "bg-brand-teal/20 text-brand-teal" : "bg-white/[0.04] text-white/25"}`}>
-                          {c.name[0]}
-                        </div>
-                        <span className="truncate">{c.name}</span>
-                      </div>
-                      <span className={`relative z-10 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                        c.status === "active" ? "bg-brand-teal shadow-[0_0_4px_rgba(26,91,92,0.8)]" :
-                        c.status === "renewal" ? "bg-yellow-400 shadow-[0_0_4px_rgba(250,204,21,0.6)]" : "bg-white/20"
-                      }`} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="activity"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-0.5"
-                >
-                  {ACTIVITY_LOG.map((log, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      className="px-3 py-2 rounded-lg text-[10px] font-mono hover:bg-white/[0.03] transition-all cursor-default group"
-                    >
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                          log.type === "success" ? "bg-brand-teal" :
-                          log.type === "warning" ? "bg-yellow-400" : "bg-blue-400"
-                        }`} />
-                        <span className="text-white/20">{log.time}</span>
-                      </div>
-                      <span className="text-white/50 leading-tight group-hover:text-white/70 transition-colors">{log.event}</span>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+        {/* Ambient glow spots */}
+        <div className="absolute -top-16 -left-16 w-48 h-48 bg-brand-teal/8 rounded-full blur-[60px] pointer-events-none" />
+        <div className="absolute bottom-1/2 -right-12 w-36 h-36 bg-brand-teal/5 rounded-full blur-[50px] pointer-events-none" />
+        
+        {/* Scanline */}
+        <motion.div 
+          animate={{ y: ["-100%", "400%"] }}
+          transition={{ duration: 8, ease: "linear", repeat: Infinity }}
+          className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-transparent via-brand-teal/[0.03] to-transparent z-30 pointer-events-none"
+        />
 
-        {/* Right panel */}
-        <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={selectedClient}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="flex-1 flex flex-col"
-            >
-              {/* Client Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-white font-semibold text-sm">{client.name}</h3>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider border
-                      ${client.status === "active" ? "bg-brand-teal/10 text-brand-teal border-brand-teal/20" :
-                      client.status === "renewal" ? "bg-yellow-400/10 text-yellow-400 border-yellow-400/20" :
-                      "bg-white/5 text-white/40 border-white/10"}`}>
-                      {client.status}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider border
-                      ${client.risk === "Low" ? "bg-emerald-500/10 text-emerald-400 border-emerald-400/20" :
-                      client.risk === "Medium" ? "bg-yellow-400/10 text-yellow-400 border-yellow-400/20" :
-                      "bg-red-400/10 text-red-400 border-red-400/20"}`}>
-                      {client.risk}
-                    </span>
+        {/* Main Container */}
+        <div className="relative z-10 flex flex-1 overflow-hidden">
+          
+          {/* Left Sidebar */}
+          <div className="w-48 border-r border-white/[0.06] flex flex-col bg-black/20 shrink-0">
+            {/* Logo Header */}
+            <div className="h-12 border-b border-white/[0.06] flex items-center px-4 gap-2 shrink-0">
+              <div className="w-5 h-5 rounded bg-brand-teal/20 flex items-center justify-center text-brand-teal font-bold font-serif text-[11px]">
+                B
+              </div>
+              <span className="font-semibold text-white/90 text-sm tracking-tight">BrokerOS</span>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex-1 overflow-y-auto py-4 no-scrollbar">
+              {sidebarGroups.map((group) => (
+                <div key={group.name} className="mb-4">
+                  <div className="px-4 mb-2">
+                    <span className="text-[8px] font-mono uppercase tracking-[0.2em] text-white/30">{group.name}</span>
+                  </div>
+                  <div className="space-y-0.5 px-2">
+                    {group.items.map((item) => {
+                      const isActive = activeTab === item;
+                      const isClickable = ["Dashboard", "RFQs", "Commissions"].includes(item);
+                      return (
+                        <div
+                          key={item}
+                          onClick={() => isClickable && setActiveTab(item)}
+                          className={`px-3 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 relative ${isClickable ? "cursor-pointer" : "cursor-default opacity-40"}
+                            ${isActive 
+                              ? "bg-brand-teal/10 text-brand-teal font-medium" 
+                              : "text-white/60 hover:bg-white/[0.04] hover:text-white/90"}`}
+                        >
+                          {isActive && (
+                            <motion.div layoutId="sidebar-indicator" className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-brand-teal rounded-r-full shadow-[0_0_8px_rgba(26,91,92,0.8)]" />
+                          )}
+                          <span className={`${isActive ? "pl-1" : "pl-1"}`}>{item}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-                <RiskGauge score={client.score} />
+              ))}
+            </div>
+            
+            {/* User Profile */}
+            <div className="p-3 border-t border-white/[0.06] flex items-center gap-2 shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-brand-terracotta to-brand-teal overflow-hidden flex items-center justify-center shrink-0">
+                <span className="text-[9px] text-white font-medium">IV</span>
               </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-[10px] font-medium text-white/90 truncate">ishaan</span>
+                <span className="text-[8px] text-white/40 truncate w-full">ishaan14verma@...</span>
+              </div>
+            </div>
+          </div>
 
-              {/* Metrics row */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="border border-white/[0.06] bg-white/[0.02] rounded-xl p-3 hover:bg-white/[0.04] transition-colors">
-                  <p className="font-mono text-[8px] text-white/25 uppercase tracking-wider mb-1">Active Policies</p>
-                  <p className="text-lg font-bold text-brand-teal">{client.policies}</p>
-                </div>
-                <div className="border border-white/[0.06] bg-white/[0.02] rounded-xl p-3 hover:bg-white/[0.04] transition-colors">
-                  <p className="font-mono text-[8px] text-white/25 uppercase tracking-wider mb-1">Total Premium</p>
-                  <p className="text-lg font-bold text-white/90">{client.premium}</p>
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col bg-black/10 overflow-hidden">
+            {/* Top Nav */}
+            <div className="h-12 border-b border-white/[0.06] flex items-center px-6 justify-between bg-black/20 shrink-0">
+              <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-full px-3 py-1.5 w-64">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/30">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span className="text-[10px] text-white/30 font-sans">Search...</span>
+              </div>
+              <div className="flex gap-4 items-center">
+                <span className="font-mono text-[9px] text-white/20">{latency}ms</span>
+                <div className="flex gap-2">
+                  <div className="w-5 h-5 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center cursor-pointer hover:bg-white/[0.08]" />
+                  <div className="w-5 h-5 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center cursor-pointer hover:bg-white/[0.08]" />
                 </div>
               </div>
+            </div>
 
-              {/* Sparkline chart */}
-              <div className="border border-white/[0.06] bg-white/[0.02] rounded-xl p-3 mb-3">
-                <p className="font-mono text-[8px] text-white/25 uppercase tracking-wider mb-2">Premium Trend (12mo)</p>
-                <div className="text-brand-teal">
-                  <MiniSparkline />
-                </div>
-              </div>
+            {/* Dynamic Views */}
+            <div className="flex-1 overflow-hidden relative">
+              <AnimatePresence mode="wait">
+                {activeTab === "Dashboard" && (
+                  <motion.div
+                    key="dashboard"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 p-6 overflow-y-auto no-scrollbar flex flex-col gap-4"
+                  >
+                    <div className="flex justify-between items-end shrink-0">
+                      <div>
+                        <h1 className="text-xl font-bold text-white mb-1">Good afternoon, ishaan</h1>
+                        <p className="text-[11px] text-white/50">You have <span className="text-white/90 font-medium">0 pending actions</span> requiring attention today.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="px-3 py-1.5 bg-brand-teal/10 border border-brand-teal/30 rounded-md text-[10px] text-brand-teal font-medium hover:bg-brand-teal/20 transition-colors">+ New Quote</button>
+                        <button className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.1] rounded-md text-[10px] text-white/70 hover:bg-white/[0.08] transition-colors">Add Client</button>
+                      </div>
+                    </div>
 
-              {/* Ontology node mini-map */}
-              <div className="flex-1 border border-white/[0.06] bg-black/30 rounded-xl p-3 overflow-hidden min-h-[50px]">
-                <p className="font-mono text-[8px] text-white/25 uppercase tracking-wider mb-2">Relationship Graph</p>
-                <div className="relative w-full h-full min-h-[40px]">
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 60">
-                    {/* Connection lines */}
-                    {[
-                      { x1: 100, y1: 30, x2: 25, y2: 12 },
-                      { x1: 100, y1: 30, x2: 175, y2: 12 },
-                      { x1: 100, y1: 30, x2: 40, y2: 50 },
-                      { x1: 100, y1: 30, x2: 160, y2: 50 },
-                      { x1: 25, y1: 12, x2: 40, y2: 50 },
-                    ].map((line, i) => (
-                      <motion.line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
-                        stroke="rgba(26,91,92,0.2)" strokeWidth="0.8" strokeDasharray="3 3"
-                        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                        transition={{ delay: i * 0.1, duration: 0.5 }} />
-                    ))}
-                    {/* Center node pulse */}
-                    <motion.circle cx="100" cy="30" r="10" fill="rgba(26,91,92,0.05)" stroke="rgba(26,91,92,0.15)" strokeWidth="0.5"
-                      animate={{ r: [10, 14, 10], opacity: [0.3, 0.1, 0.3] }} transition={{ duration: 3, repeat: Infinity }} />
-                    {/* Center node */}
-                    <circle cx="100" cy="30" r="5" fill="rgba(26,91,92,0.4)" stroke="rgba(26,91,92,0.8)" strokeWidth="1"
-                      style={{ filter: "drop-shadow(0 0 4px rgba(26,91,92,0.6))" }} />
-                    <text x="100" y="33" textAnchor="middle" fill="rgba(26,91,92,1)" fontSize="4" fontFamily="monospace">●</text>
-                    {/* Outer nodes */}
-                    {[{ cx: 25, cy: 12 }, { cx: 175, cy: 12 }, { cx: 40, cy: 50 }, { cx: 160, cy: 50 }].map((n, i) => (
-                      <motion.circle key={i} cx={n.cx} cy={n.cy} r="3" fill="rgba(26,91,92,0.25)" stroke="rgba(26,91,92,0.4)" strokeWidth="0.5"
-                        initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 + i * 0.08, type: "spring" }} />
-                    ))}
-                    {/* Data pulse */}
-                    <motion.circle r="1.5" fill="rgba(26,91,92,1)" style={{ filter: "drop-shadow(0 0 3px rgba(26,91,92,1))" }}
-                      animate={{ cx: [100, 25, 40, 100], cy: [30, 12, 50, 30] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }} />
-                  </svg>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+                    <div className="grid grid-cols-3 gap-4 shrink-0">
+                      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 shadow-sm hover:border-white/[0.1] transition-colors">
+                        <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">Commission Accrued</p>
+                        <p className="text-lg font-mono font-bold text-white">₹35,00,78,078</p>
+                        <p className="text-[9px] text-white/40 mt-1">This month</p>
+                      </div>
+                      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 shadow-sm hover:border-white/[0.1] transition-colors">
+                        <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">Premium Collected</p>
+                        <p className="text-lg font-mono font-bold text-white">₹0</p>
+                        <p className="text-[9px] text-white/40 mt-1">This month</p>
+                      </div>
+                      <div className="bg-red-500/[0.03] border border-red-500/20 rounded-xl p-4 relative overflow-hidden shadow-sm hover:border-red-500/30 transition-colors">
+                        <p className="text-[9px] text-red-400/70 uppercase tracking-wider mb-1">Premium Overdue</p>
+                        <p className="text-lg font-mono font-bold text-red-400">₹2,39,580</p>
+                        <p className="text-[9px] text-red-400/80 mt-1">Requires action</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 flex-1 shrink-0 mb-4 hover:border-white/[0.1] transition-colors">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xs font-semibold text-white/80">Active Pipeline</h3>
+                        <span className="text-[9px] text-brand-teal hover:text-brand-teal/80 cursor-pointer transition-colors">View Details</span>
+                      </div>
+                      <div className="relative h-1 bg-white/10 rounded-full mb-6 overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: "30%" }}
+                          transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+                          className="absolute left-0 top-0 h-full bg-brand-teal shadow-[0_0_8px_rgba(26,91,92,0.8)]" 
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 gap-4">
+                        {[
+                          { step: "PROSPECTING", num: 4, pct: "36%" },
+                          { step: "QUOTING", num: 0, pct: "0%" },
+                          { step: "UNDERWRITING", num: 0, pct: "0%" },
+                          { step: "BOUND (LAST 30D)", num: 7, pct: "64%" }
+                        ].map((p, i) => (
+                          <div key={i}>
+                            <p className="text-[8px] font-mono text-white/30 tracking-wider mb-1">{p.step}</p>
+                            <p className="text-xl font-bold text-white/90">{p.num}</p>
+                            <p className="text-[9px] text-white/40">{p.pct} of pipeline</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "Commissions" && (
+                  <motion.div
+                    key="commissions"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 p-6 overflow-y-auto no-scrollbar flex flex-col gap-4"
+                  >
+                    <div className="flex justify-between items-end shrink-0">
+                      <div>
+                        <h1 className="text-xl font-bold text-white mb-1">Commissions</h1>
+                        <p className="text-[11px] text-white/50">Track and reconcile broker commissions across all policies.</p>
+                      </div>
+                      <button className="px-3 py-1.5 bg-white/[0.03] border border-white/[0.1] rounded-md text-[10px] text-white/70 hover:bg-white/[0.08] transition-colors">Generate Invoice</button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 shrink-0 mt-2">
+                      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+                        <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">Total Accrued</p>
+                        <p className="text-lg font-mono font-bold text-white">₹35,00,78,078</p>
+                      </div>
+                      <div className="bg-white/[0.02] border border-brand-terracotta/20 rounded-xl p-4">
+                        <p className="text-[9px] text-brand-terracotta/70 uppercase tracking-wider mb-1">Total Outstanding</p>
+                        <p className="text-lg font-mono font-bold text-white">₹32,107.63</p>
+                      </div>
+                      <div className="bg-white/[0.02] border border-brand-teal/20 rounded-xl p-4">
+                        <p className="text-[9px] text-brand-teal/70 uppercase tracking-wider mb-1">Total Received</p>
+                        <p className="text-lg font-mono font-bold text-white">₹3,953.07</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl flex flex-col mt-2 overflow-hidden shrink-0 mb-4">
+                      <div className="grid grid-cols-6 border-b border-white/[0.06] p-3 text-[9px] font-mono text-white/30 uppercase tracking-wider bg-black/20">
+                        <div className="col-span-2">Client & Policy</div>
+                        <div>Premium</div>
+                        <div>Comm. Rate</div>
+                        <div>Amount</div>
+                        <div>Status</div>
+                      </div>
+                      <div className="flex flex-col">
+                        {[
+                          { client: "Acme Corp", policy: "GL-4401", premium: "₹2,33,33,33,333", rate: "15.0%", amt: "₹34,99,99,999", status: "Accrued", color: "brand-teal" },
+                          { client: "Vertex Ind", policy: "PL-1192", premium: "₹26,353.8", rate: "15.0%", amt: "₹3,953.07", status: "Received", color: "emerald-400" },
+                          { client: "Helios Energy", policy: "D&O-883", premium: "₹53,506.2", rate: "15.0%", amt: "₹8,025.93", status: "Invoiced", color: "yellow-400" },
+                          { client: "NovaTech LLC", policy: "Cyber-91", premium: "₹53,506.2", rate: "15.0%", amt: "₹8,025.93", status: "Invoiced", color: "yellow-400" },
+                        ].map((row, i) => (
+                          <div key={i} className="grid grid-cols-6 p-3 border-b border-white/[0.02] hover:bg-white/[0.04] transition-colors items-center text-xs">
+                            <div className="col-span-2 flex flex-col gap-0.5">
+                              <span className="font-medium text-white/90">{row.client}</span>
+                              <span className="text-[9px] text-brand-teal cursor-pointer hover:underline">View Policy {row.policy}</span>
+                            </div>
+                            <div className="text-white/60 font-mono text-[10px]">{row.premium}</div>
+                            <div className="text-white/60 font-mono text-[10px]">{row.rate}</div>
+                            <div className="text-white/90 font-mono text-[10px]">{row.amt}</div>
+                            <div>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-mono uppercase tracking-wider border border-${row.color}/20 text-${row.color} bg-${row.color}/10`}>
+                                {row.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === "RFQs" && (
+                  <motion.div
+                    key="rfqs"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 p-6 overflow-y-auto no-scrollbar flex flex-col gap-4"
+                  >
+                     <div className="flex items-center gap-2 mb-2 shrink-0">
+                       <span className="text-[10px] font-mono text-white/40 cursor-pointer hover:text-white/60 transition-colors">RFQs</span>
+                       <span className="text-[10px] font-mono text-white/20">{">"}</span>
+                       <span className="text-[10px] font-mono text-white/80">RFQ-2026-011</span>
+                     </div>
+                     
+                     {/* Deal Stages */}
+                     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 mb-2 shrink-0">
+                       <p className="text-[9px] text-white/40 uppercase tracking-wider mb-6 flex items-center gap-2">
+                         Deal Stages
+                         <span className="w-3 h-3 rounded-full border border-white/20 flex items-center justify-center text-[7px]">i</span>
+                       </p>
+                       <div className="relative flex justify-between items-center px-8">
+                         <div className="absolute left-10 right-10 top-1/2 h-[1px] bg-white/[0.06] -translate-y-1/2" />
+                         <motion.div 
+                           initial={{ width: 0 }}
+                           animate={{ width: "50%" }}
+                           transition={{ duration: 1, delay: 0.2 }}
+                           className="absolute left-10 top-1/2 h-[1px] bg-brand-teal -translate-y-1/2 shadow-[0_0_8px_rgba(26,91,92,0.8)]" 
+                         />
+                         
+                         {[
+                           { step: "RFQ", date: "8/27/2026", done: true },
+                           { step: "QCR", date: "Accepted", done: true },
+                           { step: "Policy", date: "Not bound", done: false },
+                           { step: "Commission", date: "Pending", done: false }
+                         ].map((s, i) => (
+                           <div key={i} className="relative z-10 flex flex-col items-center gap-2 bg-[#0c1316] px-4 py-1 rounded-md">
+                             <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${s.done ? "bg-brand-teal border-brand-teal text-black" : "bg-[#0a0f14] border-white/20 text-white/20"}`}>
+                               {s.done ? (
+                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                               ) : (
+                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                               )}
+                             </div>
+                             <div className="flex flex-col items-center">
+                               <span className="text-[10px] text-white/80 font-medium">{s.step}</span>
+                               <span className="text-[8px] text-white/40">{s.date}</span>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+
+                     {/* Details */}
+                     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5 flex flex-col gap-4 shrink-0 mb-4">
+                       <div className="flex justify-between items-start">
+                         <div>
+                           <div className="flex items-center gap-3 mb-2">
+                             <h2 className="text-xl font-bold text-white">RFQ-2026-011</h2>
+                             <span className="px-2 py-0.5 rounded-full text-[8px] bg-white/5 text-white/80 border border-white/10 uppercase tracking-wider flex items-center gap-1.5">
+                               <span className="w-1.5 h-1.5 rounded-full bg-brand-teal animate-pulse" /> New
+                             </span>
+                           </div>
+                           <p className="text-[11px] text-white/50">Fire Loss of Profit • Fire</p>
+                         </div>
+                         <div className="flex items-center gap-3">
+                           <span className="text-[10px] text-white/50 hover:text-white/80 cursor-pointer transition-colors">View QCR →</span>
+                           <div className="flex gap-1">
+                             {[1,2,3].map(i => <div key={i} className="w-7 h-7 rounded border border-white/[0.06] flex items-center justify-center text-white/40 hover:bg-white/[0.04] hover:text-white/80 cursor-pointer transition-colors">●</div>)}
+                           </div>
+                           <button className="px-4 py-2 border border-white/[0.1] rounded-md text-[10px] text-white/70 hover:bg-white/[0.05] transition-colors ml-2">Mark Not Materialized</button>
+                           <button className="px-4 py-2 bg-brand-teal/90 rounded-md text-[10px] text-black font-semibold hover:bg-brand-teal transition-colors">+ Add Carrier Quote</button>
+                         </div>
+                       </div>
+                       
+                       <div className="grid grid-cols-3 gap-4 pt-6 mt-2 border-t border-white/[0.06]">
+                         <div>
+                           <p className="text-[8px] font-mono text-white/30 tracking-wider mb-1.5">PRODUCT / COVERAGE</p>
+                           <p className="text-xs text-white/90 font-medium">Fire Loss of Profit</p>
+                         </div>
+                         <div>
+                           <p className="text-[8px] font-mono text-white/30 tracking-wider mb-1.5">DATE RECEIVED</p>
+                           <p className="text-xs text-white/90 font-medium">Aug 27, 2026</p>
+                         </div>
+                         <div>
+                           <p className="text-[8px] font-mono text-white/30 tracking-wider mb-1.5">ASSIGNED BROKER</p>
+                           <p className="text-xs text-white/90 font-medium">David Kim</p>
+                         </div>
+                       </div>
+                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Bottom bar */}
-      <div className="relative z-10 px-4 py-1.5 border-t border-white/[0.06] flex justify-between font-mono text-[8px] text-white/20 bg-black/30 backdrop-blur-sm">
-        <span>{CLIENTS.length} entities · {CLIENTS.reduce((a, c) => a + c.policies, 0)} policies</span>
-        <div className="flex items-center gap-2">
-          <motion.div 
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-1 h-1 rounded-full bg-brand-teal"
-          />
-          <span className="text-brand-teal/50">Sync: Live</span>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
