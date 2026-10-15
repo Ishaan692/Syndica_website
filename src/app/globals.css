@@ -1,47 +1,208 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-
-  --color-background: #faf9f8;
-  --color-foreground: #111111;
-  --color-brand-teal: #1a5b5c;
-  --color-brand-terracotta: #d96c5b;
-  --color-brand-sand: #e6dfd5;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Base styles */
 :root {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  /* ─── C1. COLOR TOKENS ─── */
+  --ink: #0A0A0B;
+  --ink-2: #111113;
+  --ink-3: #1A1A1D;
+  --paper: #ECE8DF;
+  
+  --text-1: #ECE8DF;
+  --text-2: rgba(236, 232, 223, 0.68);
+  --text-3: rgba(236, 232, 223, 0.44);
+  
+  --rule: rgba(236, 232, 223, 0.14);
+  --rule-soft: rgba(236, 232, 223, 0.06);
+  
+  --signal: #FF4F2B; /* Vermilion — Under 2% of screen */
+
+  /* Spectrum Colors */
+  --spec-1: #FF3D2E;
+  --spec-2: #FF9A1F;
+  --spec-3: #F5F03A;
+  --spec-4: #38E08C;
+  --spec-5: #2FB5FF;
+  --spec-6: #6B4DFF;
+  --spec-7: #D83DFF;
+
+  /* C6. Motion Easing */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* ─── BASE RESET & DEFAULTS ─── */
+html {
+  background-color: var(--ink);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
+  background-color: var(--ink);
+  color: var(--text-1);
   margin: 0;
   padding: 0;
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
+/* ─── C5. CHROME, SELECTION & FOCUS ─── */
 ::selection {
-  background-color: rgba(26, 91, 92, 0.2);
-  color: var(--color-foreground);
+  background: var(--signal);
+  color: var(--ink);
 }
 
-/* Lenis recommended CSS */
-html.lenis, html.lenis body {
-  height: auto;
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
 }
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
 }
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
+::-webkit-scrollbar-track {
+  background: var(--ink);
 }
-.lenis.lenis-stopped {
-  overflow: hidden;
+::-webkit-scrollbar-thumb {
+  background: var(--ink-3);
 }
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
+
+/* Link underline behavior */
+.link-underline {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  transition: text-decoration-color 0.2s ease;
+}
+.link-underline:hover {
+  text-decoration-color: var(--signal);
+}
+
+/* ─── C2. TYPOGRAPHY UTILITIES ─── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* display-xl: Archivo, wdth 68, weight 800, UPPERCASE, line-height 0.86, letter-spacing -0.01em */
+.display-xl {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 68;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.86;
+  letter-spacing: -0.01em;
+  font-size: clamp(56px, min(12.5vw, 17vh), 190px);
+  margin-left: -0.04em;
+}
+
+/* h1/h2: Archivo, wdth 82, weight 700, sentence case, line-height 0.95, letter-spacing -0.015em */
+.heading-hero {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 82;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+  font-size: clamp(40px, 5.2vw, 84px);
+  text-wrap: balance;
+  margin-left: -0.03em;
+}
+
+/* h3: Archivo, wdth 90, weight 600, 28-32px, line-height 1.1 */
+.heading-sub {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 82;
+  font-weight: 700;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+.heading-h3 {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 90;
+  font-weight: 600;
+  font-size: clamp(24px, 2.8vw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* body-l: Plex Sans 400, 20px/1.5, max-width 52ch */
+.body-l {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.5;
+  max-width: 52ch;
+  text-wrap: pretty;
+  color: var(--text-2);
+}
+
+/* body: 16px/1.6, text-2, max-width 60ch */
+.body-default {
+  font-family: var(--font-body), sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 60ch;
+  text-wrap: pretty;
+  color: var(--text-2);
+}
+
+/* label: Archivo, wdth 125, weight 500, 11px, letter-spacing 0.18em, uppercase, text-3 */
+.folio-label {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 125;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.wordmark {
+  font-family: var(--font-display), sans-serif;
+  font-variation-settings: "wdth" 125;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+/* ─── C3. CONTAINER & GRID ─── */
+.container-grid {
+  width: 100%;
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(20px, 4vw, 64px);
+  padding-right: clamp(20px, 4vw, 64px);
+}
+
+/* ─── C6. REDUCED MOTION SUPPORT ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
